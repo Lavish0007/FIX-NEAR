@@ -1,0 +1,535 @@
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+
+/* =========================================================
+   FIXNEAR — DESIGN TOKENS
+   ========================================================= */
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", sans-serif;
+  --font-display: "Syne", sans-serif;
+
+  /* Brand */
+  --color-primary: #4F46E5;
+  --color-primary-hover: #4338CA;
+
+  /* Light theme */
+  --color-page: #F8FAFC;
+  --color-section: #FFFFFF;
+  --color-muted: #F1F5F9;
+  --color-card: #FFFFFF;
+
+  --color-text-main: #0F172A;
+  --color-text-body: #475569;
+  --color-text-muted: #64748B;
+
+  --color-border: #E2E8F0;
+
+  /* Dark theme */
+  --color-dark-page: #0B1120;
+  --color-dark-section: #111A2D;
+  --color-dark-card: #17233B;
+  --color-dark-card-light: #1E2D49;
+  --color-dark-border: #334765;
+
+  --color-dark-text: #F8FAFC;
+  --color-dark-text-body: #B8C5D9;
+  --color-dark-text-muted: #7F91AD;
+
+  --color-dark-primary: #6366F1;
+  --color-dark-primary-bright: #818CF8;
+
+  --color-success: #10B981;
+  --color-info: #38BDF8;
+  --color-warning: #F59E0B;
+}
+
+
+/* =========================================================
+   ROOT VARIABLES
+   ========================================================= */
+
+:root {
+  /* Brand */
+  --primary: #4F46E5;
+  --primary-hover: #4338CA;
+
+  /* Light surfaces */
+  --surface-page: #F8FAFC;
+  --surface-section: #FFFFFF;
+  --surface-muted: #F1F5F9;
+  --surface-card: #FFFFFF;
+
+  /* Light text */
+  --text-main: #0F172A;
+  --text-body: #475569;
+  --text-muted: #64748B;
+
+  /* Light border */
+  --border: #E2E8F0;
+
+  /* Status */
+  --success: #10B981;
+  --info: #38BDF8;
+  --warning: #F59E0B;
+}
+
+
+/* =========================================================
+   DARK THEME VARIABLES
+   ========================================================= */
+
+.dark {
+  --primary: #6366F1;
+  --primary-hover: #818CF8;
+
+  --surface-page: #0B1120;
+  --surface-section: #111A2D;
+  --surface-muted: #17233B;
+  --surface-card: #17233B;
+
+  --text-main: #F8FAFC;
+  --text-body: #B8C5D9;
+  --text-muted: #7F91AD;
+
+  --border: #334765;
+
+  --success: #10B981;
+  --info: #38BDF8;
+  --warning: #F59E0B;
+}
+
+
+/* =========================================================
+   HTML / BODY
+   ========================================================= */
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+
+  background: var(--surface-page);
+  color: var(--text-main);
+
+  font-family: "Plus Jakarta Sans", sans-serif;
+
+  transition:
+    background-color 300ms ease,
+    color 300ms ease;
+}
+
+
+/* =========================================================
+   FIXNEAR PAGE
+   ========================================================= */
+
+.fixnear-page {
+  background: var(--surface-page);
+  color: var(--text-main);
+
+  transition:
+    background-color 300ms ease,
+    color 300ms ease;
+}
+
+
+.fixnear-section {
+  background: var(--surface-section);
+  color: var(--text-main);
+
+  transition:
+    background-color 300ms ease,
+    color 300ms ease,
+    border-color 300ms ease;
+}
+
+
+.fixnear-section-muted {
+  background: var(--surface-muted);
+  color: var(--text-main);
+
+  transition:
+    background-color 300ms ease,
+    color 300ms ease;
+}
+
+
+/* =========================================================
+   CARDS
+   ========================================================= */
+
+.fixnear-card {
+  background: var(--surface-card);
+  border-color: var(--border);
+  color: var(--text-main);
+
+  transition:
+    background-color 300ms ease,
+    border-color 300ms ease,
+    color 300ms ease,
+    box-shadow 300ms ease,
+    transform 250ms ease;
+}
+
+
+/* Dark card depth */
+
+.dark .fixnear-card {
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 15%),
+    0 12px 30px rgb(0 0 0 / 12%);
+}
+
+
+/* =========================================================
+   PRIMARY BUTTON
+   ========================================================= */
+
+.fixnear-primary-button {
+  background: var(--primary);
+  color: #FFFFFF;
+
+  transition:
+    background-color 200ms ease,
+    transform 200ms ease,
+    box-shadow 200ms ease;
+}
+
+.fixnear-primary-button:hover {
+  background: var(--primary-hover);
+  transform: translateY(-2px);
+
+  box-shadow:
+    0 10px 25px rgb(79 70 229 / 18%);
+}
+
+
+/* =========================================================
+   DARK PRIMARY BUTTON
+   ========================================================= */
+
+.dark .fixnear-primary-button {
+  background: #6366F1;
+  color: #FFFFFF;
+
+  box-shadow:
+    0 8px 24px rgb(99 102 241 / 18%);
+}
+
+.dark .fixnear-primary-button:hover {
+  background: #818CF8;
+
+  box-shadow:
+    0 12px 30px rgb(99 102 241 / 30%);
+}
+
+
+/* =========================================================
+   BRAND GLOW
+   ========================================================= */
+
+.fixnear-glow {
+  position: relative;
+  isolation: isolate;
+}
+
+.fixnear-glow::before {
+  content: "";
+
+  position: absolute;
+
+  width: 420px;
+  height: 420px;
+
+  top: -160px;
+  right: -120px;
+
+  background: rgb(79 70 229 / 7%);
+
+  border-radius: 999px;
+
+  filter: blur(80px);
+
+  pointer-events: none;
+
+  z-index: -1;
+}
+
+
+/* Dark glow — slightly brighter */
+
+.dark .fixnear-glow::before {
+  background: rgb(99 102 241 / 13%);
+}
+
+
+/* =========================================================
+   DARK THEME — EXTRA DEPTH
+   ========================================================= */
+
+.dark {
+  background: #0B1120;
+}
+
+
+/* Slight blue tint between sections */
+
+.dark .fixnear-section {
+  background: #111A2D;
+}
+
+
+/* Muted areas */
+
+.dark .fixnear-section-muted {
+  background: #17233B;
+}
+
+
+/* Cards */
+
+.dark .fixnear-card {
+  background: #17233B;
+  border-color: #334765;
+}
+
+
+/* Secondary cards */
+
+.dark .fixnear-card-light {
+  background: #1E2D49;
+  border-color: #3B5275;
+}
+
+
+/* =========================================================
+   DARK TEXT HELPERS
+   ========================================================= */
+
+.dark .text-slate-950 {
+  color: #F8FAFC !important;
+}
+
+.dark .text-slate-900 {
+  color: #F1F5F9 !important;
+}
+
+.dark .text-slate-800 {
+  color: #E2E8F0 !important;
+}
+
+.dark .text-slate-700 {
+  color: #CBD5E1 !important;
+}
+
+.dark .text-slate-600 {
+  color: #B8C5D9 !important;
+}
+
+.dark .text-slate-500 {
+  color: #94A3B8 !important;
+}
+
+.dark .text-slate-400 {
+  color: #7F91AD !important;
+}
+
+
+/* =========================================================
+   DARK BORDER HELPERS
+   ========================================================= */
+
+.dark .border-slate-800 {
+  border-color: #334765 !important;
+}
+
+.dark .border-slate-700 {
+  border-color: #3B5275 !important;
+}
+
+.dark .border-slate-600 {
+  border-color: #475D7D !important;
+}
+
+
+/* =========================================================
+   DARK BACKGROUND HELPERS
+   ========================================================= */
+
+.dark .bg-slate-950 {
+  background-color: #0B1120 !important;
+}
+
+.dark .bg-slate-900 {
+  background-color: #111A2D !important;
+}
+
+.dark .bg-slate-800 {
+  background-color: #17233B !important;
+}
+
+.dark .bg-slate-700 {
+  background-color: #1E2D49 !important;
+}
+
+
+/* =========================================================
+   DARK INDIGO
+   ========================================================= */
+
+.dark .text-indigo-400 {
+  color: #818CF8 !important;
+}
+
+.dark .text-indigo-500 {
+  color: #818CF8 !important;
+}
+
+.dark .text-indigo-600 {
+  color: #A5B4FC !important;
+}
+
+.dark .bg-indigo-500 {
+  background-color: #6366F1 !important;
+}
+
+.dark .bg-indigo-600 {
+  background-color: #6366F1 !important;
+}
+
+.dark .bg-indigo-700 {
+  background-color: #4F46E5 !important;
+}
+
+.dark .border-indigo-500 {
+  border-color: #6366F1 !important;
+}
+
+
+/* =========================================================
+   STATUS COLORS
+   ========================================================= */
+
+.fixnear-success {
+  color: #10B981;
+}
+
+.fixnear-info {
+  color: #38BDF8;
+}
+
+.fixnear-warning {
+  color: #F59E0B;
+}
+
+.dark .fixnear-success {
+  color: #34D399;
+}
+
+.dark .fixnear-info {
+  color: #38BDF8;
+}
+
+.dark .fixnear-warning {
+  color: #FBBF24;
+}
+
+
+/* =========================================================
+   SUBTLE DARK GLOW FOR ACTIVE ELEMENTS
+   ========================================================= */
+
+.dark .fixnear-active {
+  background: rgb(99 102 241 / 14%);
+  border-color: rgb(129 140 248 / 45%);
+  color: #A5B4FC;
+
+  box-shadow:
+    0 0 0 1px rgb(99 102 241 / 8%),
+    0 8px 24px rgb(99 102 241 / 10%);
+}
+
+
+/* =========================================================
+   SCROLLBAR
+   ========================================================= */
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface-page);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+
+/* Dark scrollbar */
+
+.dark ::-webkit-scrollbar-track {
+  background: #0B1120;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #64748B;
+}
+
+
+/* =========================================================
+   TEXT SELECTION
+   ========================================================= */
+
+::selection {
+  background: #4F46E5;
+  color: #FFFFFF;
+}
+
+
+/* =========================================================
+   FOCUS STATES
+   ========================================================= */
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid #818CF8;
+  outline-offset: 3px;
+}
+
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+
+    transition-duration: 0.01ms !important;
+  }
+}
