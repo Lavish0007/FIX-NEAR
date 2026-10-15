@@ -11,14 +11,13 @@ import {
   Eye,
   EyeOff,
   CheckCircle2,
-  Users,
-  Building2,
-  Compass,
   Sun,
   Moon,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { PageTransition } from '../components/PageTransition';
+import { AuthShowcase } from '../components/AuthShowcase';
+import { validateRegistration } from '../utils/registration';
 
 export const Signup: React.FC = () => {
   const navigate = useNavigate();
@@ -37,37 +36,26 @@ export const Signup: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading || isSuccess) return;
     setErrorMessage('');
 
-    if (!name.trim()) {
-      setErrorMessage('Please enter your full name.');
-      return;
-    }
-
-    if (!email.trim() || !email.includes('@')) {
-      setErrorMessage('Please enter a valid email address.');
-      return;
-    }
-
-    if (password.length < 6) {
-      setErrorMessage('Password must be at least 6 characters long.');
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setErrorMessage('Passwords do not match.');
+    const validationError = validateRegistration({ name, email, password, confirmPassword });
+    if (validationError) {
+      setErrorMessage(validationError);
       return;
     }
 
     setIsLoading(true);
     try {
-      await signup(name.trim(), email.trim(), password, city.trim() || 'Metro Area');
+      await signup(name.trim(), email.trim().toLowerCase(), password, city.trim() || 'Metro Area');
       setIsSuccess(true);
       setTimeout(() => {
-        navigate('/dashboard', { replace: true });
+        navigate('/', { replace: true });
       }, 700);
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Failed to create account.');
+    } catch (err: unknown) {
+      setErrorMessage(
+        err instanceof Error ? err.message : 'Unable to create your account right now. Please try again.'
+      );
       setIsLoading(false);
     }
   };
@@ -87,81 +75,7 @@ export const Signup: React.FC = () => {
           </button>
         </div>
 
-        {/* ========================================================================= */}
-        {/* LEFT COLUMN: Visual Civic Area                                            */}
-        {/* ========================================================================= */}
-        <div className="hidden lg:flex lg:w-1/2 xl:w-7/12 relative bg-slate-900 text-white p-12 xl:p-16 flex-col justify-between overflow-hidden border-r border-slate-800 select-none">
-          <div className="absolute inset-0 opacity-10 pointer-events-none">
-            <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <pattern id="signup-grid" width="48" height="48" patternUnits="userSpaceOnUse">
-                  <path d="M 48 0 L 0 0 0 48" fill="none" stroke="#6366f1" strokeWidth="0.75" />
-                </pattern>
-              </defs>
-              <rect width="100%" height="100%" fill="url(#signup-grid)" />
-            </svg>
-          </div>
-
-          <div className="absolute -top-24 -left-24 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
-
-          {/* Brand header */}
-          <div className="relative z-10">
-            <span className="text-xl font-bold tracking-tight font-display flex items-center gap-1.5 text-white">
-              FixNear<span className="w-2 h-2 rounded-full bg-indigo-500" />
-            </span>
-            <span className="text-[11px] font-mono tracking-widest text-indigo-300 uppercase mt-1 block">
-              Civic Infrastructure Network
-            </span>
-          </div>
-
-          {/* Central Editorial Narrative */}
-          <div className="relative z-10 max-w-xl space-y-8 my-auto py-8">
-            <div className="space-y-3">
-              <span className="text-xs font-mono font-semibold uppercase tracking-widest text-indigo-400">
-                Community Participation
-              </span>
-              <h2 className="text-3xl xl:text-5xl font-extrabold tracking-tight font-display leading-[1.12]">
-                A platform built for neighborhood pride.
-              </h2>
-              <p className="text-sm xl:text-base text-slate-300 leading-relaxed pt-1">
-                When you report an issue, you give local authorities exact locations, photographs,
-                and priority signals to accelerate neighborhood maintenance.
-              </p>
-            </div>
-
-            {/* Three Pillar Cards */}
-            <div className="grid grid-cols-3 gap-3 pt-2">
-              <div className="p-4 bg-slate-800/80 backdrop-blur-sm rounded-2xl border border-slate-700/80 space-y-1.5 shadow-sm">
-                <Users className="w-5 h-5 text-indigo-400" />
-                <h4 className="text-xs font-bold text-white">Community First</h4>
-                <p className="text-[11px] text-slate-400 leading-relaxed">
-                  Join neighbors who care about their streets.
-                </p>
-              </div>
-
-              <div className="p-4 bg-slate-800/80 backdrop-blur-sm rounded-2xl border border-slate-700/80 space-y-1.5 shadow-sm">
-                <Building2 className="w-5 h-5 text-indigo-400" />
-                <h4 className="text-xs font-bold text-white">Direct Notice</h4>
-                <p className="text-[11px] text-slate-400 leading-relaxed">
-                  Route problems straight into actionable dispatch.
-                </p>
-              </div>
-
-              <div className="p-4 bg-slate-800/80 backdrop-blur-sm rounded-2xl border border-slate-700/80 space-y-1.5 shadow-sm">
-                <Compass className="w-5 h-5 text-indigo-400" />
-                <h4 className="text-xs font-bold text-white">Live Tracking</h4>
-                <p className="text-[11px] text-slate-400 leading-relaxed">
-                  Track every milestone until the repair is verified.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="relative z-10 pt-4 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
-            <span>Verified Citizen Accounts</span>
-            <span className="font-mono text-[11px] text-indigo-400">INSTANT ONBOARDING</span>
-          </div>
-        </div>
+        <AuthShowcase />
 
         {/* ========================================================================= */}
         {/* RIGHT COLUMN: Signup Form                                                 */}
@@ -195,12 +109,13 @@ export const Signup: React.FC = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Full Name */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                <label htmlFor="signup-name" className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                   Full name
                 </label>
                 <div className="relative">
                   <input
                     type="text"
+                    id="signup-name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Vidushi Srivastava"
@@ -213,12 +128,13 @@ export const Signup: React.FC = () => {
 
               {/* Email */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                <label htmlFor="signup-email" className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                   Email address
                 </label>
                 <div className="relative">
                   <input
                     type="email"
+                    id="signup-email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="vidushi@example.com"
@@ -232,12 +148,13 @@ export const Signup: React.FC = () => {
 
               {/* City / Neighborhood */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                <label htmlFor="signup-city" className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                   City / Neighborhood
                 </label>
                 <div className="relative">
                   <input
                     type="text"
+                    id="signup-city"
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
                     placeholder="Ghaziabad / Sector 4"
@@ -250,16 +167,19 @@ export const Signup: React.FC = () => {
               {/* Passwords (2-Col Grid) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                  <label htmlFor="signup-password" className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                     Password
                   </label>
                   <div className="relative">
                     <input
                       type={showPassword ? 'text' : 'password'}
+                      id="signup-password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
                       autoComplete="new-password"
+                      minLength={6}
+                      maxLength={128}
                       required
                       className="w-full pl-10 pr-10 py-3 text-sm bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-indigo-600 text-slate-900 dark:text-white shadow-sm shadow-slate-950/5 transition-colors"
                     />
@@ -268,16 +188,19 @@ export const Signup: React.FC = () => {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                  <label htmlFor="signup-confirm-password" className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                     Confirm password
                   </label>
                   <div className="relative">
                     <input
                       type={showPassword ? 'text' : 'password'}
+                      id="signup-confirm-password"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="••••••••"
                       autoComplete="new-password"
+                      minLength={6}
+                      maxLength={128}
                       required
                       className="w-full pl-10 pr-10 py-3 text-sm bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-indigo-600 text-slate-900 dark:text-white shadow-sm shadow-slate-950/5 transition-colors"
                     />

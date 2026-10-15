@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authService } from '../services/api';
+import { ApiError, authService } from '../services/api';
+import type { AuthResponse } from '../services/api';
 
 export interface UserProfile {
   id: string;
@@ -24,11 +25,20 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const readStoredUser = (): UserProfile | null => {
+  const saved = localStorage.getItem('fixnear_user');
+  if (!saved) return null;
+
+  try {
+    return JSON.parse(saved) as UserProfile;
+  } catch {
+    localStorage.removeItem('fixnear_user');
+    return null;
+  }
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<UserProfile | null>(() => {
-    const saved = localStorage.getItem('fixnear_user');
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [user, setUser] = useState<UserProfile | null>(readStoredUser);
   const [token, setToken] = useState<string | null>(() => {
     return localStorage.getItem('fixnear_token');
   });
@@ -56,11 +66,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
   };
 
+  const clearSession = () => {
+    localStorage.removeItem('fixnear_token');
+    localStorage.removeItem('fixnear_user');
+    setToken(null);
+    setUser(null);
+  };
+
+  const storeAuthenticatedSession = (data: AuthResponse) => {
+    if (
+      data?.success !== true ||
+      typeof data.token !== 'string' ||
+      !data.token ||
+      !data.user ||
+      typeof data.user.id !== 'string' ||
+      typeof data.user.email !== 'string'
+    ) {
+      throw new Error('The server returned an invalid authentication response. Please try again.');
+    }
+
+    localStorage.setItem('fixnear_token', data.token);
+    localStorage.setItem('fixnear_user', JSON.stringify(data.user));
+    setToken(data.token);
+    setUser(data.user);
+  };
+
+  useEffect(() => {
+    window.addEventListener('fixnear:auth-invalid', clearSession);
+    return () => window.removeEventListener('fixnear:auth-invalid', clearSession);
+  }, []);
+
   // Verify stored session on mount
   useEffect(() => {
     const verifySession = async () => {
       const savedToken = localStorage.getItem('fixnear_token');
       if (!savedToken) {
+        localStorage.removeItem('fixnear_user');
+        setUser(null);
+        setToken(null);
         setLoading(false);
         return;
       }
@@ -70,13 +113,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (res.success && res.user) {
           setUser(res.user);
           localStorage.setItem('fixnear_user', JSON.stringify(res.user));
+        } else {
+          clearSession();
         }
-      } catch (err) {
-        console.warn('Session verification failed, clearing stale token.');
-        localStorage.removeItem('fixnear_token');
-        localStorage.removeItem('fixnear_user');
-        setUser(null);
-        setToken(null);
+      } catch (error) {
+        if (error instanceof ApiError && (error.status === 401 || error.status === 404)) {
+          clearSession();
+        }
       } finally {
         setLoading(false);
       }
@@ -87,29 +130,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string) => {
     const data = await authService.login({ email, password });
-    if (data.token && data.user) {
-      localStorage.setItem('fixnear_token', data.token);
-      localStorage.setItem('fixnear_user', JSON.stringify(data.user));
-      setToken(data.token);
-      setUser(data.user);
-    }
+    storeAuthenticatedSession(data);
   };
 
   const signup = async (name: string, email: string, password: string, city?: string) => {
     const data = await authService.signup({ name, email, password, city });
-    if (data.token && data.user) {
-      localStorage.setItem('fixnear_token', data.token);
-      localStorage.setItem('fixnear_user', JSON.stringify(data.user));
-      setToken(data.token);
-      setUser(data.user);
-    }
+    storeAuthenticatedSession(data);
   };
 
   const logout = () => {
-    localStorage.removeItem('fixnear_token');
-    localStorage.removeItem('fixnear_user');
-    setToken(null);
-    setUser(null);
+    clearSession();
   };
 
   const refreshUser = async () => {

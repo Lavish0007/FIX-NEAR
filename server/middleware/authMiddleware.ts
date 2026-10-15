@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { getJwtSecret } from '../config/auth';
 
 export interface AuthRequest extends Request {
   user?: {
@@ -15,7 +16,7 @@ export interface AuthRequest extends Request {
  * How this works:
  * 1. Checks if the incoming request has an 'Authorization' header.
  * 2. Extracts the token from format: "Bearer <token>".
- * 3. Verifies the token signature using the secret key (JWT_SECRET).
+ * 3. Verifies the token signature using the configured JWT_SECRET.
  * 4. Decodes user information (id, email, name) and attaches it to req.user.
  * 5. Calls next() to let the request proceed to the route controller.
  */
@@ -41,7 +42,15 @@ export const protect = (req: AuthRequest, res: Response, next: NextFunction): vo
   }
 
   try {
-    const secret = process.env.JWT_SECRET || 'fixnear_jwt_super_secret_key_2026';
+    const secret = getJwtSecret();
+    if (!secret) {
+      res.status(503).json({
+        success: false,
+        message: 'Authentication is not configured. Please contact the service administrator.',
+      });
+      return;
+    }
+
     const decoded = jwt.verify(token, secret) as {
       id: string;
       email: string;

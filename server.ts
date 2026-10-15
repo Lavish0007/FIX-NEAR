@@ -5,18 +5,19 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
 
-import { connectDB } from './server/config/db';
+import { connectDB, getIsDbConnected } from './server/config/db';
 import { seedDatabaseIfEmpty } from './server/config/seed';
 import authRoutes from './server/routes/authRoutes';
 import issueRoutes from './server/routes/issueRoutes';
 import notificationRoutes from './server/routes/notificationRoutes';
 import commentRoutes from './server/routes/commentRoutes';
 
-// Load environment variables
-dotenv.config();
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Support both documented locations while preserving process-level overrides.
+dotenv.config({ path: path.resolve(__dirname, '.env') });
+dotenv.config({ path: path.resolve(__dirname, 'server/.env') });
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -31,6 +32,7 @@ app.get('/api/health', (_req: Request, res: Response) => {
   res.json({
     success: true,
     message: 'FixNear API is running',
+    database: getIsDbConnected() ? 'connected' : 'unavailable',
     timestamp: new Date().toISOString(),
   });
 });
@@ -74,6 +76,9 @@ async function startServer() {
   });
 }
 
-startServer().catch((err) => {
-  console.error('Failed to start server:', err);
+startServer().catch((error: unknown) => {
+  console.error(
+    'Failed to start server:',
+    error instanceof Error ? error.name : 'UnknownError'
+  );
 });

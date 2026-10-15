@@ -2,92 +2,116 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { User } from '../models/User';
+import { getJwtSecret } from '../config/auth';
 import { getIsDbConnected } from '../config/db';
-import { memoryStore } from '../data/store';
 import { AuthRequest } from '../middleware/authMiddleware';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fixnear_jwt_super_secret_key_2026';
+export interface AuthUser {
+  _id: string | { toString(): string };
+  name: string;
+  email: string;
+  password: string;
+  city: string;
+  createdAt: Date;
+}
 
-/**
- * Generate a JWT token for a user
- */
-const generateToken = (id: string, email: string, name: string): string => {
-  return jwt.sign({ id, email, name }, JWT_SECRET, { expiresIn: '7d' });
+export interface AuthUserRepository {
+  findByEmail(email: string): Promise<AuthUser | null>;
+  create(user: Omit<AuthUser, '_id'>): Promise<AuthUser>;
+  findById(id: string): Promise<AuthUser | null>;
+}
+
+interface AuthControllerDependencies {
+  users: AuthUserRepository;
+  isDatabaseConnected: () => boolean;
+  getJwtSecret: () => string | undefined;
+}
+
+const mongoUsers: AuthUserRepository = {
+  findByEmail: async (email) => User.findOne({ email }),
+  create: async (user) => User.create(user),
+  findById: async (id) => User.findById(id).select('-password'),
 };
 
-/**
- * @desc    Register a new user
- * @route   POST /api/auth/signup
- * @access  Public
- */
-export const signup = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { name, email, password, city } = req.body;
+const isDuplicateKeyError = (error: unknown): boolean =>
+  typeof error === 'object' &&
+  error !== null &&
+  'code' in error &&
+  error.code === 11000;
 
-    // 1. Basic validation
-    if (!name || !name.trim()) {
+const publicUser = (user: AuthUser) => ({
+  id: user._id.toString(),
+  name: user.name,
+  email: user.email,
+  city: user.city,
+  createdAt: user.createdAt,
+});
+
+export const createAuthController = ({
+  users,
+  isDatabaseConnected,
+  getJwtSecret,
+}: AuthControllerDependencies) => {
+  const getSecret = (res: Response): string | null => {
+    const secret = getJwtSecret();
+    if (!secret || secret.length < 32) {
+      res.status(503).json({
+        success: false,
+        message: 'Authentication is not configured. Set a JWT_SECRET of at least 32 characters.',
+      });
+      return null;
+    }
+    return secret;
+  };
+
+  const signup = async (req: Request, res: Response): Promise<void> => {
+    const body = req.body ?? {};
+    const { name, email, password, city } = body as Record<string, unknown>;
+
+    if (typeof name !== 'string' || !name.trim()) {
       res.status(400).json({ success: false, message: 'Please provide your full name.' });
       return;
     }
 
-    if (!email || !/^\S+@\S+\.\S+$/.test(email.trim())) {
+    if (
+      typeof email !== 'string' ||
+      email.length > 254 ||
+      !/^\S+@\S+\.\S+$/.test(email.trim())
+    ) {
       res.status(400).json({ success: false, message: 'Please provide a valid email address.' });
       return;
     }
 
-    if (!password || password.length < 6) {
+    if (typeof password !== 'string' || password.length < 6 || password.length > 128) {
       res.status(400).json({
         success: false,
-        message: 'Password must be at least 6 characters long.',
+        message: 'Password must be between 6 and 128 characters long.',
       });
       return;
     }
 
+    if (city !== undefined && typeof city !== 'string') {
+      res.status(400).json({ success: false, message: 'Please provide a valid city or neighborhood.' });
+      return;
+    }
+
+    if (!isDatabaseConnected()) {
+      res.status(503).json({
+        success: false,
+        message: 'Account registration is temporarily unavailable because persistent storage is not connected.',
+      });
+      return;
+    }
+
+    const secret = getSecret(res);
+    if (!secret) return;
+
     const cleanEmail = email.trim().toLowerCase();
 
-    // 2. Check if email already exists
-    if (getIsDbConnected()) {
-      const existingUser = await User.findOne({ email: cleanEmail });
+    try {
+      const existingUser = await users.findByEmail(cleanEmail);
       if (existingUser) {
-        res.status(400).json({
-          success: false,
-          message: 'An account with this email already exists.',
-        });
-        return;
-      }
-
-      // 3. Hash password using bcryptjs
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(password, salt);
-
-      // 4. Save user to MongoDB
-      const newUser = await User.create({
-        name: name.trim(),
-        email: cleanEmail,
-        password: hashedPassword,
-        city: city?.trim() || 'Metro Area',
-        createdAt: new Date(),
-      });
-
-      const token = generateToken(newUser._id.toString(), newUser.email, newUser.name);
-
-      res.status(201).json({
-        success: true,
-        message: 'Account created successfully.',
-        token,
-        user: {
-          id: newUser._id.toString(),
-          name: newUser.name,
-          email: newUser.email,
-          city: newUser.city,
-          createdAt: newUser.createdAt,
-        },
-      });
-    } else {
-      // In-Memory Fallback
-      const existingInMemory = memoryStore.users.find((u) => u.email === cleanEmail);
-      if (existingInMemory) {
-        res.status(400).json({
+        res.status(409).json({
           success: false,
           message: 'An account with this email already exists.',
         });
@@ -95,62 +119,51 @@ export const signup = async (req: Request, res: Response): Promise<void> => {
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);
-      const newUserId = 'usr_' + Date.now();
-      const newUser = {
-        _id: newUserId,
+      const newUser = await users.create({
         name: name.trim(),
         email: cleanEmail,
         password: hashedPassword,
-        city: city?.trim() || 'Metro Area',
-        createdAt: new Date(),
-      };
-
-      memoryStore.users.push(newUser);
-
-      // Add a welcome notification
-      memoryStore.notifications.unshift({
-        _id: 'notif_' + Date.now(),
-        userId: newUserId,
-        message: `Welcome to FixNear, ${newUser.name}! Your civic reporting account is active.`,
-        type: 'SYSTEM',
-        read: false,
+        city: typeof city === 'string' && city.trim() ? city.trim() : 'Metro Area',
         createdAt: new Date(),
       });
 
-      const token = generateToken(newUser._id, newUser.email, newUser.name);
+      const token = jwt.sign(
+        { id: newUser._id.toString(), email: newUser.email, name: newUser.name },
+        secret,
+        { expiresIn: '7d' }
+      );
 
       res.status(201).json({
         success: true,
         message: 'Account created successfully.',
         token,
-        user: {
-          id: newUser._id,
-          name: newUser.name,
-          email: newUser.email,
-          city: newUser.city,
-          createdAt: newUser.createdAt,
-        },
+        user: publicUser(newUser),
+      });
+    } catch (error) {
+      if (isDuplicateKeyError(error)) {
+        res.status(409).json({
+          success: false,
+          message: 'An account with this email already exists.',
+        });
+        return;
+      }
+
+      console.error(
+        'Signup failed:',
+        error instanceof Error ? error.name : 'UnknownError'
+      );
+      res.status(500).json({
+        success: false,
+        message: 'Unable to create your account right now. Please try again.',
       });
     }
-  } catch (error: any) {
-    console.error('Signup error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error during signup. Please try again.',
-    });
-  }
-};
+  };
 
-/**
- * @desc    Authenticate user & get token
- * @route   POST /api/auth/login
- * @access  Public
- */
-export const login = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { email, password } = req.body;
+  const login = async (req: Request, res: Response): Promise<void> => {
+    const body = req.body ?? {};
+    const { email, password } = body as Record<string, unknown>;
 
-    if (!email || !password) {
+    if (typeof email !== 'string' || typeof password !== 'string' || !email.trim() || !password) {
       res.status(400).json({
         success: false,
         message: 'Please provide both email and password.',
@@ -158,133 +171,95 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const cleanEmail = email.trim().toLowerCase();
-
-    if (getIsDbConnected()) {
-      const user = await User.findOne({ email: cleanEmail });
-      if (!user) {
-        res.status(401).json({
-          success: false,
-          message: 'Invalid email or password.',
-        });
-        return;
-      }
-
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) {
-        res.status(401).json({
-          success: false,
-          message: 'Invalid email or password.',
-        });
-        return;
-      }
-
-      const token = generateToken(user._id.toString(), user.email, user.name);
-
-      res.json({
-        success: true,
-        message: 'Logged in successfully.',
-        token,
-        user: {
-          id: user._id.toString(),
-          name: user.name,
-          email: user.email,
-          city: user.city,
-          createdAt: user.createdAt,
-        },
+    if (!isDatabaseConnected()) {
+      res.status(503).json({
+        success: false,
+        message: 'Sign in is temporarily unavailable because persistent storage is not connected.',
       });
-    } else {
-      // In-Memory Fallback
-      const user = memoryStore.users.find((u) => u.email === cleanEmail);
-      if (!user) {
-        res.status(401).json({
-          success: false,
-          message: 'Invalid email or password.',
-        });
-        return;
-      }
-
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) {
-        res.status(401).json({
-          success: false,
-          message: 'Invalid email or password.',
-        });
-        return;
-      }
-
-      const token = generateToken(user._id, user.email, user.name);
-
-      res.json({
-        success: true,
-        message: 'Logged in successfully.',
-        token,
-        user: {
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          city: user.city,
-          createdAt: user.createdAt,
-        },
-      });
-    }
-  } catch (error: any) {
-    console.error('Login error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error during login. Please try again.',
-    });
-  }
-};
-
-/**
- * @desc    Get current user profile
- * @route   GET /api/auth/me
- * @access  Private (Protected by JWT)
- */
-export const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const userId = req.user?.id;
-    if (!userId) {
-      res.status(401).json({ success: false, message: 'Unauthorized' });
       return;
     }
 
-    if (getIsDbConnected()) {
-      const user = await User.findById(userId).select('-password');
-      if (!user) {
-        res.status(404).json({ success: false, message: 'User not found' });
+    const secret = getSecret(res);
+    if (!secret) return;
+
+    try {
+      const user = await users.findByEmail(email.trim().toLowerCase());
+      if (!user || !(await bcrypt.compare(password, user.password))) {
+        res.status(401).json({
+          success: false,
+          message: 'Invalid email or password.',
+        });
         return;
       }
+
+      const token = jwt.sign(
+        { id: user._id.toString(), email: user.email, name: user.name },
+        secret,
+        { expiresIn: '7d' }
+      );
+
       res.json({
         success: true,
-        user: {
-          id: user._id.toString(),
-          name: user.name,
-          email: user.email,
-          city: user.city,
-          createdAt: user.createdAt,
-        },
+        message: 'Logged in successfully.',
+        token,
+        user: publicUser(user),
       });
-    } else {
-      const user = memoryStore.users.find((u) => u._id === userId);
-      if (!user) {
-        res.status(404).json({ success: false, message: 'User not found' });
-        return;
-      }
-      res.json({
-        success: true,
-        user: {
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          city: user.city,
-          createdAt: user.createdAt,
-        },
+    } catch (error) {
+      console.error(
+        'Login failed:',
+        error instanceof Error ? error.name : 'UnknownError'
+      );
+      res.status(500).json({
+        success: false,
+        message: 'Unable to sign in right now. Please try again.',
       });
     }
-  } catch (error: any) {
-    console.error('getMe error:', error);
-    res.status(500).json({ success: false, message: 'Failed to retrieve user profile.' });
-  }
+  };
+
+  const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ success: false, message: 'Unauthorized.' });
+      return;
+    }
+
+    if (!isDatabaseConnected()) {
+      res.status(503).json({
+        success: false,
+        message: 'Your session cannot be verified because persistent storage is not connected.',
+      });
+      return;
+    }
+
+    try {
+      const user = await users.findById(userId);
+      if (!user) {
+        res.status(401).json({ success: false, message: 'Your session is no longer valid. Please sign in again.' });
+        return;
+      }
+
+      res.json({ success: true, user: publicUser(user) });
+    } catch (error) {
+      console.error(
+        'Profile lookup failed:',
+        error instanceof Error ? error.name : 'UnknownError'
+      );
+      res.status(500).json({
+        success: false,
+        message: 'Unable to verify your session right now. Please try again.',
+      });
+    }
+  };
+
+  return { signup, login, getMe };
 };
+
+const authController = createAuthController({
+  users: mongoUsers,
+  isDatabaseConnected: getIsDbConnected,
+  getJwtSecret,
+});
+
+export const signup = authController.signup;
+export const login = authController.login;
+export const getMe = authController.getMe;

@@ -3,8 +3,8 @@ import mongoose from 'mongoose';
 /**
  * MongoDB Connection Handler
  * Connects to MongoDB Atlas using MONGO_URI from environment variables.
- * If MONGO_URI is missing or Atlas is unreachable, provides clear beginner-friendly
- * feedback and activates in-memory fallback so the application keeps running smoothly.
+ * If MONGO_URI is missing or Atlas is unreachable, the app can serve its demo
+ * preview, but account registration and login require persistent storage.
  */
 let isConnected = false;
 
@@ -12,11 +12,9 @@ export async function connectDB(): Promise<boolean> {
   const uri = process.env.MONGO_URI;
 
   if (!uri) {
-    console.log('----------------------------------------------------');
-    console.log('FixNear Backend: No MONGO_URI provided in .env');
-    console.log('Running in local memory-backed mode for instant preview.');
-    console.log('To connect MongoDB Atlas, set MONGO_URI in your server/.env');
-    console.log('----------------------------------------------------');
+    console.warn(
+      'MongoDB is not configured. Account registration and sign-in are unavailable until MONGO_URI is set.'
+    );
     return false;
   }
 
@@ -29,12 +27,12 @@ export async function connectDB(): Promise<boolean> {
     console.log(`MongoDB connected successfully: ${conn.connection.host}`);
     console.log('----------------------------------------------------');
     return true;
-  } catch (error: any) {
-    console.error('----------------------------------------------------');
-    console.error('MongoDB Atlas connection failed:', error.message);
-    console.error('Check your IP whitelist (0.0.0.0/0) and credentials in MONGO_URI.');
-    console.error('Activating local memory store so you can test FixNear right now.');
-    console.error('----------------------------------------------------');
+  } catch (error: unknown) {
+    console.error(
+      'MongoDB connection failed:',
+      error instanceof Error ? error.name : 'UnknownError'
+    );
+    console.error('Check the MONGO_URI value, network access rules, and database credentials.');
     isConnected = false;
     return false;
   }

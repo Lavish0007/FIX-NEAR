@@ -78,7 +78,10 @@ export async function seedDatabaseIfEmpty(): Promise<void> {
 
       console.log('Demo account and sample issues seeded successfully into MongoDB Atlas.');
     }
-  } catch (err: any) {
-    console.error('Error seeding demo data into MongoDB:', err.message);
+  } catch (error: unknown) {
+    console.error(
+      'Error seeding demo data into MongoDB:',
+      error instanceof Error ? error.name : 'UnknownError'
+    );
   }
 }

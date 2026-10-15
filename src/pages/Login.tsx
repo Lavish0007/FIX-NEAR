@@ -10,13 +10,12 @@ import {
   EyeOff,
   CheckCircle2,
   ShieldCheck,
-  MapPin,
-  Clock,
   Sun,
   Moon,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { PageTransition } from '../components/PageTransition';
+import { AuthShowcase } from '../components/AuthShowcase';
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -30,26 +29,34 @@ export const Login: React.FC = () => {
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  const from = (location.state as any)?.from?.pathname || '/';
+  const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || '/';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading || isSuccess) return;
     setErrorMessage('');
 
-    if (!email.trim() || !password) {
-      setErrorMessage('Please enter both email and password.');
+    if (!email.trim() || !/^\S+@\S+\.\S+$/.test(email.trim())) {
+      setErrorMessage('Please enter a valid email address.');
+      return;
+    }
+
+    if (!password) {
+      setErrorMessage('Please enter your password.');
       return;
     }
 
     setIsLoading(true);
     try {
-      await login(email.trim(), password);
+      await login(email.trim().toLowerCase(), password);
       setIsSuccess(true);
       setTimeout(() => {
         navigate(from, { replace: true });
       }, 700);
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Invalid email or password.');
+    } catch (err: unknown) {
+      setErrorMessage(
+        err instanceof Error ? err.message : 'Unable to sign in right now. Please try again.'
+      );
       setIsLoading(false);
     }
   };
@@ -64,10 +71,12 @@ export const Login: React.FC = () => {
       await login('demo@fixnear.app', 'FixNear@2026');
       setIsSuccess(true);
       setTimeout(() => {
-        navigate('/dashboard', { replace: true });
+        navigate('/', { replace: true });
       }, 700);
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Demo login failed.');
+    } catch (err: unknown) {
+      setErrorMessage(
+        err instanceof Error ? err.message : 'Unable to sign in with the demo account right now.'
+      );
       setIsLoading(false);
     }
   };
@@ -87,232 +96,7 @@ export const Login: React.FC = () => {
           </button>
         </div>
 
-        {/* ========================================================================= */}
-{/* LEFT COLUMN: Product Showcase                                             */}
-{/* ========================================================================= */}
-
-<div className="hidden lg:flex lg:w-1/2 xl:w-7/12 relative bg-slate-950 text-white pt-6 pb-12 px-12 xl:pt-8 xl:pb-16 xl:px-16 flex-col justify-between overflow-hidden border-r border-slate-800 select-none">
-
-  {/* Subtle architectural grid */}
-  <div className="absolute inset-0 opacity-[0.08] pointer-events-none">
-    <svg
-      className="w-full h-full"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <defs>
-        <pattern
-          id="login-grid"
-          width="48"
-          height="48"
-          patternUnits="userSpaceOnUse"
-        >
-          <path
-            d="M 48 0 L 0 0 0 48"
-            fill="none"
-            stroke="#6366f1"
-            strokeWidth="0.75"
-          />
-        </pattern>
-      </defs>
-
-      <rect
-        width="100%"
-        height="100%"
-        fill="url(#login-grid)"
-      />
-    </svg>
-  </div>
-
-  {/* Ambient lighting */}
-  <div className="absolute -top-32 -left-32 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
-
-  <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-
-
-  {/* ----------------------------------------------------------------------- */}
-  {/* Brand                                                                   */}
-  {/* ----------------------------------------------------------------------- */}
-
-  <div className="relative z-10 max-w-xl space-y-6 my-auto py-4">
-
-    <span className="text-xl font-bold tracking-tight font-display flex items-center gap-1.5 text-white">
-      FixNear
-      <span className="w-2 h-2 rounded-full bg-indigo-500" />
-    </span>
-
-    <span className="text-[11px] font-mono tracking-widest text-indigo-300 uppercase mt-1 block">
-      Civic Issue Reporting
-    </span>
-
-  </div>
-
-
-  {/* ----------------------------------------------------------------------- */}
-  {/* Main message + report preview                                           */}
-  {/* ----------------------------------------------------------------------- */}
-
-  <div className="relative z-10 max-w-xl space-y-8 my-auto py-8">
-
-    {/* Editorial heading */}
-    <div className="space-y-4">
-
-      <span className="text-xs font-mono font-semibold uppercase tracking-widest text-indigo-400">
-        Notice · Report · Track · Resolve
-      </span>
-
-      <h2 className="text-3xl xl:text-5xl font-extrabold tracking-tight font-display leading-[1.08]">
-
-        Your neighborhood.
-        <br />
-
-        <span className="text-slate-400 font-normal">
-          Your voice.
-        </span>
-
-        <br />
-
-        Your report.
-
-      </h2>
-
-      <p className="text-sm xl:text-base text-slate-300 leading-relaxed pt-1 max-w-lg">
-        Report local issues, track their progress, and stay informed as
-        community repairs move from submission to resolution.
-      </p>
-
-    </div>
-
-
-    {/* --------------------------------------------------------------------- */}
-    {/* Realistic report preview                                             */}
-    {/* --------------------------------------------------------------------- */}
-
-    <div className="bg-slate-800/70 backdrop-blur-md rounded-2xl border border-slate-700/80 p-5 shadow-xl space-y-4">
-
-      {/* Report header */}
-      <div className="flex items-center justify-between">
-
-        <span className="flex items-center gap-1.5 text-white font-semibold text-xs">
-
-          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-
-          REPORT SUBMITTED
-
-        </span>
-
-        <span className="text-indigo-300 text-xs font-mono">
-          FX-20261002-4821
-        </span>
-
-      </div>
-
-
-      {/* Issue information */}
-      <div className="flex items-center justify-between gap-4 pt-1">
-
-        <div>
-
-          <h4 className="text-sm font-bold text-white">
-            Streetlight not working
-          </h4>
-
-          <div className="flex items-center gap-1 text-xs text-slate-400 mt-1">
-
-            <MapPin className="w-3.5 h-3.5 text-indigo-400" />
-
-            <span>
-              Main Gate Road · Sector 4
-            </span>
-
-          </div>
-
-        </div>
-
-        <span className="px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-300 text-[10px] font-mono font-bold border border-emerald-500/25 shrink-0">
-          IN PROGRESS
-        </span>
-
-      </div>
-
-
-      {/* Status history */}
-      <div className="pt-3 border-t border-slate-700/80">
-
-        <div className="flex items-center justify-between gap-3">
-
-          <div className="flex items-center gap-2 text-[11px] text-slate-400 font-mono">
-
-            <Clock className="w-3 h-3 shrink-0" />
-
-            <span>
-              Reported
-            </span>
-
-          </div>
-
-          <div className="flex-1 h-px bg-slate-700" />
-
-          <div className="flex items-center gap-2 text-[11px] text-slate-300 font-mono">
-
-            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
-
-            <span>
-              Under Review
-            </span>
-
-          </div>
-
-          <div className="flex-1 h-px bg-slate-700" />
-
-          <div className="flex items-center gap-2 text-[11px] text-slate-500 font-mono">
-
-            <span className="w-1.5 h-1.5 rounded-full bg-slate-600" />
-
-            <span>
-              Assigned
-            </span>
-
-          </div>
-
-        </div>
-
-      </div>
-
-
-      {/* Last update */}
-      <div className="flex items-center justify-between pt-1 text-[10px] font-mono">
-
-        <span className="text-slate-500">
-          Last updated
-        </span>
-
-        <span className="text-slate-400">
-          Recently
-        </span>
-
-      </div>
-
-    </div>
-
-  </div>
-
-
-  {/* ----------------------------------------------------------------------- */}
-  {/* Bottom product information                                              */}
-  {/* ----------------------------------------------------------------------- */}
-
-  <div className="relative z-10 pt-4 border-t border-slate-800 flex items-center justify-between text-xs">
-
-    <span className="text-slate-500">
-      Track issues from report to resolution
-    </span>
-
-    <span className="font-mono text-[11px] text-indigo-400">
-      FIXNEAR
-    </span>
-
-  </div>
-</div>
+        <AuthShowcase />
 
   <div className="flex flex-1 items-center justify-center bg-slate-50 px-6 py-10 dark:bg-slate-900 sm:px-8 lg:px-10 xl:px-16">
     <motion.div
@@ -444,7 +228,7 @@ export const Login: React.FC = () => {
 
       <div className="mt-7 border-t border-slate-200 pt-5 text-center text-sm text-slate-600 dark:border-slate-700 dark:text-slate-300">
         Need an account?{' '}
-        <Link to="/register" className="font-semibold text-indigo-600 hover:text-indigo-500 dark:text-indigo-400">
+        <Link to="/signup" className="font-semibold text-indigo-600 hover:text-indigo-500 dark:text-indigo-400">
           Create one
         </Link>
       </div>

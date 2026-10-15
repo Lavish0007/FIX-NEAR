@@ -128,12 +128,13 @@ Visit [mongodb.com/cloud/atlas](https://www.mongodb.com/cloud/atlas) and registe
   ```
 
 ### Step 6: Configure Environment
-In your `.env` file (or `server/.env`):
+Copy `.env.example` to `.env` in the project root (or create `server/.env`) and replace the placeholders:
 ```env
 PORT=3000
 MONGO_URI=mongodb+srv://<username>:<password>@cluster0.xxxxx.mongodb.net/fixnear?retryWrites=true&w=majority
-JWT_SECRET=your_super_secret_jwt_key_2026
+JWT_SECRET=<a-unique-random-secret-at-least-32-characters>
 ```
+Keep the real `.env` file out of version control. The server loads both supported environment-file locations and uses environment variables supplied by the host in preference to file values.
 
 ### Step 7: Run Backend
 ```bash
@@ -144,7 +145,7 @@ Terminal will output:
 FixNear server running on port 3000
 MongoDB connected successfully
 ```
-*Note: If no MONGO_URI is set, FixNear automatically runs with an in-memory fallback store so all features, demo accounts, and tests continue to work out of the box!*
+Account registration, login, and persistent issue data require a reachable MongoDB database and a configured JWT secret. Without MongoDB, the server can still start its demo preview, but registration and login return a service-unavailable response instead of pretending that an account was saved to temporary memory. Check `/api/health`; its `database` field reports whether MongoDB is connected.
 
 ---
 

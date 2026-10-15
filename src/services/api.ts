@@ -13,6 +13,25 @@ export const api = axios.create({
   timeout: 10000,
 });
 
+export interface AuthResponse {
+  success: boolean;
+  token: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    city: string;
+    createdAt?: string;
+  };
+}
+
+export class ApiError extends Error {
+  constructor(message: string, public readonly status?: number) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
 // Request Interceptor: Attach JWT Token from localStorage if present
 api.interceptors.request.use(
   (config) => {
@@ -36,25 +55,29 @@ api.interceptors.response.use(
       if (!publicPaths.includes(window.location.pathname)) {
         localStorage.removeItem('fixnear_token');
         localStorage.removeItem('fixnear_user');
+        window.dispatchEvent(new Event('fixnear:auth-invalid'));
       }
     }
 
+    const serverMessage = error.response?.data?.message;
     const message =
-      error.response?.data?.message ||
-      error.message ||
-      'Unable to connect to FixNear server. Please check your internet connection.';
+      typeof serverMessage === 'string'
+        ? serverMessage
+        : error.response
+          ? 'The request could not be completed. Please try again.'
+          : 'Unable to connect to FixNear. Check your internet connection and try again.';
 
-    return Promise.reject(new Error(message));
+    return Promise.reject(new ApiError(message, error.response?.status));
   }
 );
 
 // Auth Service
 export const authService = {
-  signup: async (data: { name: string; email: string; password: string; city?: string }) => {
+  signup: async (data: { name: string; email: string; password: string; city?: string }): Promise<AuthResponse> => {
     const res = await api.post('/auth/signup', data);
     return res.data;
   },
-  login: async (credentials: { email: string; password: string }) => {
+  login: async (credentials: { email: string; password: string }): Promise<AuthResponse> => {
     const res = await api.post('/auth/login', credentials);
     return res.data;
   },
