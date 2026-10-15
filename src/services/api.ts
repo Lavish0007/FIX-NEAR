@@ -109,6 +109,7 @@ export const issueService = {
     priority?: string;
     imageUrl?: string;
     frequency?: string;
+    affectedCount?: string;
     landmark?: string;
   }) => {
     const res = await api.post('/issues', issueData);

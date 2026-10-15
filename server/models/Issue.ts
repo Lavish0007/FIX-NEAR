@@ -11,6 +11,7 @@ export interface IIssue extends Document {
   userId: mongoose.Types.ObjectId;
   imageUrl?: string;
   frequency?: string;
+  affectedCount?: string;
   landmark?: string;
   createdAt: Date;
   resolvedAt?: Date | null;
@@ -84,6 +85,17 @@ const issueSchema = new Schema<IIssue>(
     },
     frequency: {
       type: String,
+      default: null,
+    },
+    affectedCount: {
+      type: String,
+      enum: [
+        'Not sure',
+        'A few neighbors',
+        'Dozens of residents',
+        'Entire block / street',
+        'All commuters on main artery',
+      ],
       default: null,
     },
     landmark: {

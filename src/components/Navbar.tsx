@@ -107,6 +107,7 @@ export const Navbar: React.FC = () => {
                 <Link
                   key={link.path}
                   to={link.path}
+                  aria-current={active ? 'page' : undefined}
                   className={`transition-colors whitespace-nowrap hover:text-slate-950 dark:hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 rounded py-1 px-1 relative ${
                     active
                       ? 'text-slate-950 dark:text-white font-semibold'
@@ -133,6 +134,7 @@ export const Navbar: React.FC = () => {
               onClick={toggleTheme}
               className="p-2 text-slate-500 hover:text-slate-950 dark:text-slate-400 dark:hover:text-white rounded-lg transition-colors cursor-pointer"
               title={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
+              aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
             >
               {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
             </button>
@@ -165,6 +167,8 @@ export const Navbar: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                    aria-expanded={userDropdownOpen}
+                    aria-haspopup="menu"
                     className="flex items-center gap-2 p-1 pl-2.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors shadow-sm shadow-slate-950/5 cursor-pointer"
                   >
                     <span className="max-w-[100px] truncate">{user?.name || 'Account'}</span>
@@ -224,16 +228,15 @@ export const Navbar: React.FC = () => {
               <>
                 <Link
                   to="/login"
-                  className="px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white transition-colors"
+                  className="rounded-lg px-3.5 py-2 text-xs font-semibold text-slate-700 transition-colors hover:text-slate-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 dark:text-slate-300 dark:hover:text-white"
                 >
                   Sign In
                 </Link>
                 <Link
-                  to="/report"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs sm:text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 rounded-xl transition-all shadow-sm shadow-indigo-950/10"
+                  to="/signup"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-sm shadow-indigo-950/10 transition-colors hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-2 dark:bg-indigo-600 dark:hover:bg-indigo-500 sm:text-sm"
                 >
-                  <PlusCircle className="w-4 h-4" />
-                  Report Issue
+                  Create Account
                 </Link>
               </>
             )}
@@ -245,6 +248,8 @@ export const Navbar: React.FC = () => {
               type="button"
               onClick={toggleTheme}
               className="p-2 text-slate-600 dark:text-slate-400"
+              aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
+              title={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
             >
               {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
             </button>
@@ -252,6 +257,8 @@ export const Navbar: React.FC = () => {
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 text-slate-600 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white"
+              aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+              aria-expanded={mobileMenuOpen}
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
@@ -266,6 +273,7 @@ export const Navbar: React.FC = () => {
                 <Link
                   key={link.path}
                   to={link.path}
+                  aria-current={isActive(link.path) ? 'page' : undefined}
                   className={`px-3 py-2 rounded-xl text-sm font-medium ${
                     isActive(link.path)
                       ? 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 font-semibold'
@@ -295,12 +303,20 @@ export const Navbar: React.FC = () => {
                   </button>
                 </>
               ) : (
-                <Link
-                  to="/login"
-                  className="w-full py-2.5 bg-indigo-600 text-white font-semibold text-center rounded-xl text-sm"
-                >
-                  Sign In
-                </Link>
+                <>
+                  <Link
+                    to="/login"
+                    className="w-full rounded-xl border border-slate-200 py-2.5 text-center text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    to="/signup"
+                    className="w-full rounded-xl bg-indigo-600 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-indigo-700 dark:hover:bg-indigo-500"
+                  >
+                    Create Account
+                  </Link>
+                </>
               )}
             </div>
           </div>

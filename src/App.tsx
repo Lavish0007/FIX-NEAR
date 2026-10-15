@@ -1,5 +1,6 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { MotionConfig } from 'framer-motion';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
@@ -20,6 +21,7 @@ import { About } from './pages/About';
 
 function AppRoutes() {
   const { isAuthenticated, loading } = useAuth();
+  const location = useLocation();
 
   // 1. Refined Loading Splash State (Requirement 2)
   if (loading) {
@@ -49,13 +51,45 @@ function AppRoutes() {
 
   // 2. Unauthenticated Experience (Immediate Auth - Section 1 & 2)
   if (!isAuthenticated) {
+    const isAuthPage = ['/login', '/signup', '/forgot-password'].includes(location.pathname);
+
     return (
-      <Routes>
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="*" element={<Login />} />
-      </Routes>
+      <div className="min-h-screen flex flex-col bg-slate-50 font-sans text-slate-900 transition-colors duration-200 dark:bg-slate-900 dark:text-slate-100">
+        {!isAuthPage && <Navbar />}
+        <main className="flex-1">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/track" element={<Track />} />
+            <Route path="/how-it-works" element={<HowItWorks />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/login" element={<Login />} />
+            <Route
+              path="/report"
+              element={<Navigate to="/login" state={{ from: { pathname: '/report' } }} replace />}
+            />
+            <Route
+              path="/my-reports"
+              element={<Navigate to="/login" state={{ from: { pathname: '/my-reports' } }} replace />}
+            />
+            <Route
+              path="/notifications"
+              element={<Navigate to="/login" state={{ from: { pathname: '/notifications' } }} replace />}
+            />
+            <Route
+              path="/profile"
+              element={<Navigate to="/login" state={{ from: { pathname: '/profile' } }} replace />}
+            />
+            <Route
+              path="/settings"
+              element={<Navigate to="/login" state={{ from: { pathname: '/settings' } }} replace />}
+            />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </main>
+        {!isAuthPage && <Footer />}
+      </div>
     );
   }
 
@@ -93,11 +127,13 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <ScrollToTop />
-        <AppRoutes />
-      </AuthProvider>
-    </BrowserRouter>
+    <MotionConfig reducedMotion="user">
+      <BrowserRouter>
+        <AuthProvider>
+          <ScrollToTop />
+          <AppRoutes />
+        </AuthProvider>
+      </BrowserRouter>
+    </MotionConfig>
   );
 }

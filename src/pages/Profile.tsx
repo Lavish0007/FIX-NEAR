@@ -3,7 +3,7 @@ import {
   Mail,
   MapPin,
   Calendar,
-  ShieldCheck,
+  UserRound,
   LogOut,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -57,8 +57,8 @@ export const Profile: React.FC = () => {
                     {user?.name || 'Citizen'}
                   </h2>
                   <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Verified Citizen Account</span>
+                    <UserRound className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                    <span>FixNear account</span>
                   </div>
                 </div>
               </div>

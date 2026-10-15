@@ -15,10 +15,12 @@ export interface AuthUser {
   createdAt: Date;
 }
 
+type AuthProfile = Omit<AuthUser, 'password'>;
+
 export interface AuthUserRepository {
   findByEmail(email: string): Promise<AuthUser | null>;
   create(user: Omit<AuthUser, '_id'>): Promise<AuthUser>;
-  findById(id: string): Promise<AuthUser | null>;
+  findById(id: string): Promise<AuthProfile | null>;
 }
 
 interface AuthControllerDependencies {
@@ -30,7 +32,8 @@ interface AuthControllerDependencies {
 const mongoUsers: AuthUserRepository = {
   findByEmail: async (email) => User.findOne({ email }),
   create: async (user) => User.create(user),
-  findById: async (id) => User.findById(id).select('-password'),
+  findById: async (id) =>
+    User.findById(id).select('-password').lean<AuthProfile>().exec(),
 };
 
 const isDuplicateKeyError = (error: unknown): boolean =>
@@ -39,7 +42,7 @@ const isDuplicateKeyError = (error: unknown): boolean =>
   'code' in error &&
   error.code === 11000;
 
-const publicUser = (user: AuthUser) => ({
+const publicUser = (user: AuthProfile) => ({
   id: user._id.toString(),
   name: user.name,
   email: user.email,

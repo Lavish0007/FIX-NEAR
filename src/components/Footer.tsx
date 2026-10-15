@@ -57,6 +57,7 @@ export const Footer: React.FC = () => {
 
             <Link
               to={isAuthenticated ? "/report" : "/login"}
+              state={!isAuthenticated ? { from: { pathname: "/report" } } : undefined}
               className="text-sm text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
             >
               Report an Issue
@@ -91,7 +92,7 @@ export const Footer: React.FC = () => {
           <div className="mt-5 flex flex-col gap-3">
 
             <Link
-              to="/#how-it-works"
+              to="/how-it-works"
               className="text-sm text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
             >
               How It Works
@@ -134,7 +135,7 @@ export const Footer: React.FC = () => {
         <div className="flex items-center gap-5 text-xs text-slate-500 dark:text-slate-500">
 
           <Link
-            to="/"
+            to="/how-it-works"
             className="hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
           >
             Process
@@ -145,7 +146,7 @@ export const Footer: React.FC = () => {
           </span>
 
           <Link
-            to="/"
+            to="/about"
             className="hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
           >
             Mission
@@ -157,6 +158,7 @@ export const Footer: React.FC = () => {
 
           <Link
             to={isAuthenticated ? "/report" : "/login"}
+            state={!isAuthenticated ? { from: { pathname: "/report" } } : undefined}
             className="hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
           >
             Submit Report

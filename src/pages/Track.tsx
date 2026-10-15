@@ -18,7 +18,7 @@ import {
   Wrench,
   Sparkles,
 } from 'lucide-react';
-import { issueService, commentService } from '../services/api';
+import { ApiError, issueService, commentService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { PageTransition } from '../components/PageTransition';
 
@@ -71,10 +71,11 @@ export const Track: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryId = searchParams.get('id') || '';
 
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   const [searchInput, setSearchInput] = useState(queryId);
   const [activeReport, setActiveReport] = useState<any | null>(null);
+  const [searchError, setSearchError] = useState('');
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -91,16 +92,25 @@ export const Track: React.FC = () => {
     if (!id.trim()) return;
     setLoading(true);
     setHasSearched(true);
+    setSearchError('');
+    setActiveReport(null);
+    setComments([]);
     try {
       const res = await issueService.getById(id.trim());
       if (res.success && res.issue) {
         setActiveReport(res.issue);
         loadComments(res.issue.reportId || res.issue._id);
       } else {
-        setActiveReport(null);
+        setSearchError('No report with that ID was found. Check the ID and try again.');
       }
-    } catch (err) {
-      setActiveReport(null);
+    } catch (err: unknown) {
+      setSearchError(
+        err instanceof ApiError && err.status === 404
+          ? 'No report with that ID was found. Check the ID and try again.'
+          : err instanceof Error
+            ? err.message
+            : 'Unable to search reports right now. Please try again.'
+      );
     } finally {
       setLoading(false);
     }
@@ -124,9 +134,13 @@ export const Track: React.FC = () => {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!searchInput.trim()) return;
-    setSearchParams({ id: searchInput.trim() });
-    fetchReport(searchInput.trim());
+    const reportId = searchInput.trim();
+    if (!reportId) return;
+    if (reportId.toLowerCase() === queryId.toLowerCase()) {
+      fetchReport(reportId);
+    } else {
+      setSearchParams({ id: reportId });
+    }
   };
 
   const handleAddComment = async (e: React.FormEvent) => {
@@ -180,13 +194,13 @@ export const Track: React.FC = () => {
           {/* Header */}
           <div className="space-y-3 mb-10">
             <span className="text-xs font-mono font-semibold uppercase tracking-widest text-indigo-600 dark:text-indigo-400 block">
-              Civic Verification Engine
+              Report lookup
             </span>
             <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight font-display text-slate-950 dark:text-white">
               Track a Report
             </h1>
             <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-xl">
-              Search any FixNear Report ID to view its real-time municipal status journey and inspection records.
+              Search a report ID to view its current status, details, and discussion.
             </p>
           </div>
 
@@ -195,12 +209,14 @@ export const Track: React.FC = () => {
             <form onSubmit={handleSearch}>
               <div className="flex flex-col sm:flex-row items-stretch gap-2 bg-white dark:bg-slate-800 p-2 rounded-2xl border border-slate-200/90 dark:border-slate-700 shadow-sm shadow-slate-950/5 focus-within:border-indigo-600 dark:focus-within:border-indigo-500 transition-all">
                 <div className="relative flex-1 flex items-center">
-                  <Search className="w-5 h-5 text-slate-400 absolute left-4" />
+                  <Search aria-hidden="true" className="w-5 h-5 text-slate-400 absolute left-4" />
                   <input
                     type="text"
+                    aria-label="Report ID"
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
                     placeholder="Enter your report ID (e.g. FX-20261002-4821)"
+                    required
                     className="w-full pl-12 pr-4 py-3 text-sm bg-transparent focus:outline-none font-mono text-slate-900 dark:text-white"
                   />
                 </div>
@@ -221,7 +237,7 @@ export const Track: React.FC = () => {
             {loading ? (
               <div className="p-16 text-center text-xs font-mono text-slate-400">
                 <div className="w-8 h-8 border-3 border-indigo-200 dark:border-indigo-900/60 border-t-indigo-600 dark:border-t-indigo-400 rounded-full animate-spin mx-auto mb-3" />
-                Querying report from MongoDB Atlas...
+                Searching reports...
               </div>
             ) : hasSearched ? (
               activeReport ? (
@@ -302,7 +318,7 @@ export const Track: React.FC = () => {
                     {activeReport.imageUrl && (
                       <div className="space-y-2">
                         <span className="text-xs font-mono uppercase text-slate-400 block font-semibold">
-                          Citizen Photographic Evidence
+                          Attached image
                         </span>
                         <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 max-w-md h-56 bg-slate-100 dark:bg-slate-900">
                           <img
@@ -323,7 +339,7 @@ export const Track: React.FC = () => {
                           Visual Status Journey
                         </span>
                         <h3 className="text-xl font-bold font-display text-slate-950 dark:text-white mt-0.5">
-                          Municipal Lifecycle Pipeline
+                          Report status timeline
                         </h3>
                       </div>
 
@@ -435,10 +451,15 @@ export const Track: React.FC = () => {
 </div>
 
                     {/* Interactive Testing Status Control */}
-                    {isAuthenticated && (
+                    {isAuthenticated &&
+                      user?.id === String(
+                        typeof activeReport.userId === 'object'
+                          ? activeReport.userId?._id
+                          : activeReport.userId
+                      ) && (
                       <div className="pt-6 border-t border-slate-100 dark:border-slate-700/80 space-y-2">
                         <span className="text-[11px] font-mono text-slate-400 uppercase tracking-wider block">
-                          Triage Pipeline Transition (Testing Control)
+                          Update your report status
                         </span>
                         <div className="grid grid-cols-3 gap-2 text-xs">
                           <button
@@ -545,13 +566,20 @@ export const Track: React.FC = () => {
                   <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mx-auto border border-indigo-100 dark:border-indigo-900/40">
                     <FileQuestion className="w-7 h-7" />
                   </div>
-                  <h3 className="text-xl font-bold font-display text-slate-950 dark:text-white">Report not found</h3>
+                  <h3 className="text-xl font-bold font-display text-slate-950 dark:text-white">
+                    {searchError.includes('No report with that ID')
+                      ? 'Report not found'
+                      : 'Unable to search reports'}
+                  </h3>
                   <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-sm mx-auto leading-relaxed">
-                    Please verify the report ID and try again. Format is typically{' '}
+                    {searchError || 'Please check the report ID and try again.'}{' '}
+                    {searchError.includes('No report with that ID') && (
+                      <>The format is typically{' '}
                     <span className="font-mono text-slate-800 dark:text-slate-200 font-semibold">
                       FX-YYYYMMDD-XXXX
                     </span>
-                    .
+                      .</>
+                    )}
                   </p>
                 </div>
               )

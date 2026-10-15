@@ -19,6 +19,7 @@ import { PageTransition } from '../components/PageTransition';
 export const MyReports: React.FC = () => {
   const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Filters & Search
@@ -28,13 +29,18 @@ export const MyReports: React.FC = () => {
 
   const loadReports = async () => {
     setLoading(true);
+    setErrorMessage('');
     try {
       const res = await issueService.getMyIssues();
       if (res.success) {
         setReports(res.issues);
+      } else {
+        setErrorMessage('Unable to load your reports. Please try again.');
       }
-    } catch (err) {
-      console.error('Error fetching reports:', err);
+    } catch (err: unknown) {
+      setErrorMessage(
+        err instanceof Error ? err.message : 'Unable to load your reports. Please try again.'
+      );
     } finally {
       setLoading(false);
     }
@@ -94,7 +100,7 @@ export const MyReports: React.FC = () => {
                 My Reports
               </h1>
               <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-xl">
-                Every ticket submitted from your account, recorded in real time on MongoDB Atlas.
+                View the reports submitted from your account and their current stored status.
               </p>
             </div>
 
@@ -102,6 +108,8 @@ export const MyReports: React.FC = () => {
               <button
                 type="button"
                 onClick={loadReports}
+                aria-label="Refresh reports"
+                disabled={loading}
                 className="p-3 rounded-xl border border-slate-200/90 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white transition-colors shadow-sm shadow-slate-950/5 cursor-pointer"
                 title="Refresh reports"
               >
@@ -141,8 +149,11 @@ export const MyReports: React.FC = () => {
                 <option value="all">All Statuses</option>
                 <option value="REPORTED">Reported</option>
                 <option value="UNDER REVIEW">Under Review</option>
+                <option value="VERIFIED">Verified</option>
+                <option value="ASSIGNED">Assigned</option>
                 <option value="IN PROGRESS">In Progress</option>
                 <option value="RESOLVED">Resolved</option>
+                <option value="CLOSED">Closed</option>
               </select>
 
               {/* Priority Filter */}
@@ -165,6 +176,20 @@ export const MyReports: React.FC = () => {
             <div className="p-16 text-center text-xs font-mono text-slate-400">
               <div className="w-8 h-8 border-2 border-indigo-200 dark:border-indigo-900/60 border-t-indigo-600 dark:border-t-indigo-400 rounded-full animate-spin mx-auto mb-3" />
               Loading your reports...
+            </div>
+          ) : errorMessage ? (
+            <div
+              role="alert"
+              className="mx-auto max-w-2xl rounded-2xl border border-red-200 bg-red-50 p-6 text-center text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300"
+            >
+              <p>{errorMessage}</p>
+              <button
+                type="button"
+                onClick={loadReports}
+                className="mt-4 rounded-lg border border-red-300 px-4 py-2 font-semibold transition-colors hover:bg-red-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 dark:border-red-800 dark:hover:bg-red-950/50"
+              >
+                Try again
+              </button>
             </div>
           ) : filteredReports.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

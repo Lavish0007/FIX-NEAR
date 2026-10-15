@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MapPin,
@@ -39,7 +39,6 @@ const PRIORITIES = [
 ];
 
 export const Report: React.FC = () => {
-  const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Stepper: 1: Describe, 2: Locate, 3: Prioritize, 4: Review, 5: Submitted
@@ -55,13 +54,14 @@ export const Report: React.FC = () => {
   const [geoLoading, setGeoLoading] = useState(false);
 
   const [priority, setPriority] = useState('MEDIUM');
-  const [frequency, setFrequency] = useState('Continuous');
-  const [affectedCount, setAffectedCount] = useState('Dozens of residents');
+  const [frequency, setFrequency] = useState('Not sure');
+  const [affectedCount, setAffectedCount] = useState('Not sure');
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   // Status & Validation
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
   const [submittedIssue, setSubmittedIssue] = useState<any | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -148,6 +148,8 @@ export const Report: React.FC = () => {
   };
 
   const handleFinalSubmit = async () => {
+    if (isSubmitting || submittedIssue) return;
+    setSubmitError('');
     setIsSubmitting(true);
     try {
       const res = await issueService.create({
@@ -157,16 +159,21 @@ export const Report: React.FC = () => {
         location: location.trim(),
         priority,
         frequency,
+        affectedCount,
         landmark: landmark.trim() || undefined,
         imageUrl: imagePreview || undefined,
       });
 
-      if (res.success && res.issue) {
-        setSubmittedIssue(res.issue);
-        setCurrentStep(5);
+      if (!res.success || !res.issue) {
+        throw new Error('The report could not be saved. Please try again.');
       }
-    } catch (err: any) {
-      alert(err.message || 'Failed to submit report. Please try again.');
+
+      setSubmittedIssue(res.issue);
+      setCurrentStep(5);
+    } catch (err: unknown) {
+      setSubmitError(
+        err instanceof Error ? err.message : 'Failed to submit report. Please try again.'
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -186,13 +193,13 @@ export const Report: React.FC = () => {
           {/* Header */}
           <div className="space-y-3 mb-10">
             <span className="text-xs font-mono font-semibold uppercase tracking-widest text-indigo-600 dark:text-indigo-400 block">
-              Civic Intake Pipeline
+              Issue reporting
             </span>
             <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight font-display text-slate-900 dark:text-white">
               Report an Issue
             </h1>
             <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-xl">
-              A 5-step guided process to catalog and dispatch community infrastructure repairs.
+              Describe a local infrastructure problem and submit it to your FixNear account.
             </p>
           </div>
 
@@ -444,14 +451,16 @@ export const Report: React.FC = () => {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                      <label htmlFor="report-frequency" className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                         Issue Frequency
                       </label>
                       <select
+                        id="report-frequency"
                         value={frequency}
                         onChange={(e) => setFrequency(e.target.value)}
                         className="w-full px-4 py-2.5 text-xs sm:text-sm bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-xl appearance-none text-slate-900 dark:text-white"
                       >
+                        <option value="Not sure">Not sure</option>
                         <option value="Continuous">Continuous (Always broken)</option>
                         <option value="Intermittent">Intermittent (Flickers/Fluctuates)</option>
                         <option value="During Rain">During Rain / Weather</option>
@@ -460,14 +469,16 @@ export const Report: React.FC = () => {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                      <label htmlFor="report-affected-count" className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                         Approx. People Affected
                       </label>
                       <select
+                        id="report-affected-count"
                         value={affectedCount}
                         onChange={(e) => setAffectedCount(e.target.value)}
                         className="w-full px-4 py-2.5 text-xs sm:text-sm bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-xl appearance-none text-slate-900 dark:text-white"
                       >
+                        <option value="Not sure">Not sure</option>
                         <option value="A few neighbors">A few neighbors (1-5)</option>
                         <option value="Dozens of residents">Dozens of residents (10-50)</option>
                         <option value="Entire block / street">Entire block / street (100+)</option>
@@ -554,7 +565,7 @@ export const Report: React.FC = () => {
                   <div className="space-y-1">
                     <h3 className="text-xl font-bold font-display text-slate-900 dark:text-white">04 · Review Summary</h3>
                     <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-                      Confirm all details before submitting to the live civic database.
+                      Check your details before saving the report.
                     </p>
                   </div>
 
@@ -600,6 +611,16 @@ export const Report: React.FC = () => {
                     </div>
                   </div>
 
+                  {submitError && (
+                    <p
+                      role="alert"
+                      className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300"
+                    >
+                      <AlertCircle className="h-4 w-4 shrink-0" />
+                      {submitError}
+                    </p>
+                  )}
+
                   <div className="pt-4 flex items-center justify-between">
                     <button
                       type="button"
@@ -618,7 +639,7 @@ export const Report: React.FC = () => {
                       {isSubmitting ? (
                         <>
                           <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          Submitting to MongoDB...
+                          Saving report...
                         </>
                       ) : (
                         <>
@@ -648,11 +669,10 @@ export const Report: React.FC = () => {
                       REPORT SUBMITTED
                     </span>
                     <h2 className="text-2xl sm:text-3xl font-extrabold font-display text-slate-950 dark:text-white">
-                      Your report is now in the FixNear system.
+                      Your report has been saved.
                     </h2>
                     <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-                      A permanent ticket has been recorded. Use this ID to track inspection,
-                      assignment, and repair progress.
+                      Keep your report ID to look up its current status and updates.
                     </p>
                   </div>
 
@@ -713,10 +733,10 @@ export const Report: React.FC = () => {
                       <ArrowRight className="w-4 h-4" />
                     </Link>
                     <Link
-                      to="/dashboard"
+                      to="/my-reports"
                       className="w-full sm:w-auto px-6 py-3.5 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-semibold text-xs sm:text-sm rounded-xl transition-all shadow-sm shadow-slate-950/5"
                     >
-                      Back to Dashboard
+                      View My Reports
                     </Link>
                   </div>
                 </motion.div>
